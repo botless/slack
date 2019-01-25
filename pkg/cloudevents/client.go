@@ -3,14 +3,21 @@ package cloudevents
 import (
 	"fmt"
 	"io/ioutil"
+	"log"
 	"net/http"
 )
 
 type Client struct {
 	Builder
-	Target    string
-	SendError error
+	Target string
+
+	send chan interface{}
+	done chan bool
 }
+
+const (
+	MAX_SEND_CHANNEL = 10
+)
 
 func NewClient(eventType, source, target string) *Client {
 	c := &Client{
@@ -33,18 +40,33 @@ func (c *Client) RequestSend(data interface{}) (*http.Response, error) {
 	return client.Do(req)
 }
 
-func (c *Client) Send(data interface{}) bool {
+func (c *Client) Send(data interface{}) error {
 	resp, err := c.RequestSend(data)
 	if err != nil {
-		c.SendError = err
-		return false
+		return err
 	}
 	if Accepted(resp) {
-		c.SendError = nil
-		return true
+		return nil
 	}
-	c.SendError = fmt.Errorf("error sending cloudevent: %s", Status(resp))
-	return false
+	return fmt.Errorf("error sending cloudevent: %s", Status(resp))
+}
+
+func (c *Client) Channel() chan<- interface{} {
+	if c.send == nil {
+		c.done = make(chan bool)
+		c.send = make(chan interface{}, MAX_SEND_CHANNEL)
+		go c.monitorSend()
+	}
+	return c.send
+}
+
+func (c *Client) Done() {
+	if c.send == nil {
+		return
+	}
+	c.done <- true
+	close(c.send)
+	c.send = nil
 }
 
 func Accepted(resp *http.Response) bool {
@@ -67,4 +89,20 @@ func Status(resp *http.Response) string {
 	}
 
 	return fmt.Sprintf("Status[%s] %s", status, body)
+}
+
+func (c *Client) monitorSend() {
+	for {
+		select {
+		case data, ok := <-c.send:
+			if ok == false {
+				break
+			}
+			if err := c.Send(data); err != nil {
+				log.Printf("error sending: %v", err)
+			}
+		case <-c.done:
+			return
+		}
+	}
 }

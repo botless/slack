@@ -2,7 +2,7 @@ package main
 
 import (
 	"github.com/botless/slack/pkg/cloudevents"
-	"log"
+	"time"
 )
 
 type Example struct {
@@ -16,6 +16,7 @@ func main() {
 		"https://github.com/knative/pkg#cloudevents-example",
 		"http://localhost:8080",
 	)
+	ch := c.Channel()
 
 	data := &Example{
 		Message: "hello, world!",
@@ -23,9 +24,9 @@ func main() {
 
 	for i := 0; i < 10; i++ {
 		data.Sequence = i
-
-		if err := c.Send(data); err != nil {
-			log.Printf("error sending: %v", err)
-		}
+		ch <- *data
 	}
+
+	time.Sleep(1 * time.Second)
+	c.Done()
 }
