@@ -26,6 +26,14 @@
   version = "v1.4.0"
 
 [[projects]]
+  digest = "1:edbef42561faa44c19129b68d1e109fbc1647f63239250391eadc8d0e7c9f669"
+  name = "github.com/kelseyhightower/envconfig"
+  packages = ["."]
+  pruneopts = "UT"
+  revision = "f611eb38b3875cc3bd991ca91c51d06446afa14c"
+  version = "v1.3.0"
+
+[[projects]]
   branch = "master"
   digest = "1:ab21f318e20a42c65b56962c8a5a74232aa301a991be458c18f51bf547829689"
   name = "github.com/knative/pkg"
@@ -57,6 +65,7 @@
   analyzer-version = 1
   input-imports = [
     "github.com/google/uuid",
+    "github.com/kelseyhightower/envconfig",
     "github.com/knative/pkg/cloudevents",
     "github.com/nlopes/slack",
   ]
