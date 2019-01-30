@@ -89,5 +89,5 @@ func (s *Slack) manageRTM() {
 			fmt.Printf("Unexpected: %v\n", msg.Data)
 		}
 	}
-	s.ceClient.Done()
+	s.ceClient.Close()
 }

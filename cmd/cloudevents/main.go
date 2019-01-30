@@ -17,13 +17,11 @@ func main() {
 		"http://localhost:8080",
 	)
 
-	data := &Example{
-		Message: "hello, world!",
-	}
-
 	for i := 0; i < 10; i++ {
-		data.Sequence = i
-
+		data := &Example{
+			Message:  "hello, world!",
+			Sequence: i,
+		}
 		if err := c.Send(data); err != nil {
 			log.Printf("error sending: %v", err)
 		}
