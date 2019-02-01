@@ -6,6 +6,7 @@ import (
 	"github.com/nlopes/slack"
 	"log"
 	"os"
+	"strings"
 )
 
 type Slack struct {
@@ -69,6 +70,12 @@ func (s *Slack) manageRTM() {
 			me := slack.MessageEvent(*ev)
 
 			ce <- Example{Message: fmt.Sprintf("%s: %s", me.User, me.Text)}
+
+			if strings.HasPrefix(me.Text, "echo ") {
+				s.rtm.SendMessage(s.rtm.NewOutgoingMessage(
+					strings.Replace(me.Text, "echo ", "", 1),
+					s.Channel))
+			}
 
 		case *slack.PresenceChangeEvent:
 			fmt.Printf("Presence Change: %v\n", ev)

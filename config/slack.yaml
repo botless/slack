@@ -1,17 +1,12 @@
-apiVersion: v1
-kind: Namespace
-metadata:
-  name: cosmic
 ---
 apiVersion: sources.eventing.knative.dev/v1alpha1
 kind: ContainerSource
 metadata:
   labels:
     controller-tools.k8s.io: "1.0"
-  name: cosmic
-  namespace: cosmic
+  name: slack
 spec:
-  image: github.com/botless/slack/cmd/minimum/
+  image: github.com/botless/slack/cmd/rtm/
   sink:
     apiVersion: eventing.knative.dev/v1alpha1
     kind: Channel
@@ -20,20 +15,20 @@ spec:
   - name: BOT_TOKEN
     valueFrom:
       secretKeyRef:
-        name: cosmic
+        name: slack
         key: BOT_TOKEN
   - name: VERIFICATION_TOKEN
     valueFrom:
       secretKeyRef:
-        name: cosmic
+        name: slack
         key: VERIFICATION_TOKEN
   - name: BOT_ID
     valueFrom:
       secretKeyRef:
-        name: cosmic
+        name: slack
         key: BOT_ID
   - name: CHANNEL_ID
     valueFrom:
       secretKeyRef:
-        name: cosmic
+        name: slack
         key: CHANNEL_ID

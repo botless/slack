@@ -1,8 +1,7 @@
 apiVersion: eventing.knative.dev/v1alpha1
 kind: Channel
 metadata:
-  name: ray-chan
-  namespace: cosmic
+  name: slack-chan
 spec:
   provisioner:
     apiVersion: eventing.knative.dev/v1alpha1

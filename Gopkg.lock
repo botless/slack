@@ -35,11 +35,11 @@
 
 [[projects]]
   branch = "master"
-  digest = "1:ab21f318e20a42c65b56962c8a5a74232aa301a991be458c18f51bf547829689"
+  digest = "1:9db540abd5738d401bc5d0a7d5da3d861158ab2249e85eb02b8e70a7265588f3"
   name = "github.com/knative/pkg"
   packages = ["cloudevents"]
   pruneopts = "UT"
-  revision = "776769b4995fac01d36f8c96df14e75a2e7d5320"
+  revision = "819ebda80ca60ec95e67d8db23dec3f67828ccb5"
 
 [[projects]]
   digest = "1:7711bc85fa91b919713feda232ffe0bd4ebb0e8426b9c0de6c6f476e0eb9b7c2"

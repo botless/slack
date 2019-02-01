@@ -1,18 +1,14 @@
 package cloudevents
 
 import (
-	"fmt"
-	"io/ioutil"
+	"github.com/knative/pkg/cloudevents"
 	"log"
-	"net/http"
 )
 
 type Client struct {
-	Builder
-	Target string
-
-	send chan interface{}
-	done chan bool
+	Client *cloudevents.Client
+	send   chan interface{}
+	done   chan bool
 }
 
 const (
@@ -20,57 +16,12 @@ const (
 )
 
 func NewClient(eventType, source, target string) *Client {
-	c := &Client{
-		Builder: Builder{
-			Source:    source,
-			EventType: eventType,
-		},
-		Target: target,
-	}
+	c := &Client{}
+	c.Client = cloudevents.NewClient(target, cloudevents.Builder{
+		Source:    source,
+		EventType: eventType,
+	})
 	return c
-}
-
-func (c *Client) RequestSend(data interface{}) (*http.Response, error) {
-	req, err := c.Build(c.Target, data)
-	if err != nil {
-		return nil, err
-	}
-
-	client := &http.Client{}
-	return client.Do(req)
-}
-
-func (c *Client) Send(data interface{}) error {
-	resp, err := c.RequestSend(data)
-	if err != nil {
-		return err
-	}
-	if Accepted(resp) {
-		return nil
-	}
-	return fmt.Errorf("error sending cloudevent: %s", Status(resp))
-}
-
-func Accepted(resp *http.Response) bool {
-	if resp.StatusCode == 204 {
-		return true
-	}
-	return false
-}
-
-func Status(resp *http.Response) string {
-	if Accepted(resp) {
-		return "sent"
-	}
-
-	status := resp.Status
-	body, err := ioutil.ReadAll(resp.Body)
-
-	if err != nil {
-		return fmt.Sprintf("Status[%s] error reading response body: %v", status, err)
-	}
-
-	return fmt.Sprintf("Status[%s] %s", status, body)
 }
 
 // Channel returns a channel that can be used to invoke Client.Send via a chan.
@@ -107,7 +58,7 @@ func (c *Client) monitorSend() {
 			if ok == false {
 				break
 			}
-			if err := c.Send(data); err != nil {
+			if err := c.Client.Send(data); err != nil {
 				log.Printf("error sending: %v", err)
 			}
 		case <-c.done:

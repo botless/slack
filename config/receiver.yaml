@@ -1,8 +1,7 @@
 apiVersion: serving.knative.dev/v1alpha1
 kind: Service
 metadata:
-  name: ray
-  namespace: cosmic
+  name: slack-reciever
 spec:
   runLatest:
     configuration:
@@ -14,15 +13,14 @@ spec:
 apiVersion: eventing.knative.dev/v1alpha1
 kind: Subscription
 metadata:
-  name: ray-subscription
-  namespace: cosmic
+  name: slack-subscription
 spec:
   channel:
     apiVersion: eventing.knative.dev/v1alpha1
     kind: Channel
-    name: ray-chan
+    name: slack-chan
   subscriber:
     ref:
       apiVersion: serving.knative.dev/v1alpha1
       kind: Service
-      name: ray
+      name: slack-reciever

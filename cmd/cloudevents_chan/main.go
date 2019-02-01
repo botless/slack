@@ -28,5 +28,5 @@ func main() {
 	}
 
 	time.Sleep(1 * time.Second)
-	c.Done()
+	c.Close()
 }
