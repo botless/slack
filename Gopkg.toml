@@ -32,6 +32,8 @@
 [[constraint]]
   branch = "master"
   name = "github.com/knative/pkg"
+  #source = "github.com/n3wscott/pkg"
+
 
 [[constraint]]
   name = "github.com/nlopes/slack"

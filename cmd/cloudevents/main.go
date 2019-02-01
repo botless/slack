@@ -1,7 +1,9 @@
 package main
 
 import (
+	"fmt"
 	"github.com/botless/slack/pkg/cloudevents"
+	ce "github.com/knative/pkg/cloudevents"
 	"log"
 )
 
@@ -22,7 +24,16 @@ func main() {
 			Message:  "hello, world!",
 			Sequence: i,
 		}
-		if err := c.Send(data); err != nil {
+
+		if err := c.Client.Send(data, ce.V01EventContext{
+			Extensions: map[string]interface{}{
+				"example": "example_ext",
+			},
+		}); err != nil {
+			fmt.Printf("failed to send cloudevent: %v\n", err)
+		}
+
+		if err := c.Client.Send(data); err != nil {
 			log.Printf("error sending: %v", err)
 		}
 	}

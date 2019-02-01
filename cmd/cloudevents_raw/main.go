@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"encoding/json"
 	"log"
 	"net/http"
 	"time"
@@ -14,15 +15,9 @@ type Example struct {
 	Message  string `json:"message"`
 }
 
-func handler(ctx context.Context, data *Example) {
+func handler(ctx context.Context, data json.RawMessage) {
 	metadata := cloudevents.FromContext(ctx)
-
-	log.Printf("[%s] %s %s: %d,%q", metadata.EventTime.Format(time.RFC3339), metadata.ContentType, metadata.Source, data.Sequence, data.Message)
-	if len(metadata.Extensions) > 0 {
-		for k, v := range metadata.Extensions {
-			log.Printf("\t[%s] %v", k, v)
-		}
-	}
+	log.Printf("[%s] %s %s: %q", metadata.EventTime.Format(time.RFC3339), metadata.ContentType, metadata.Source, string(data))
 }
 
 func main() {

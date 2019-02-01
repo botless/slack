@@ -1,17 +1,17 @@
----
+# The Slack Source.
 apiVersion: sources.eventing.knative.dev/v1alpha1
 kind: ContainerSource
 metadata:
-  labels:
-    controller-tools.k8s.io: "1.0"
   name: slack
 spec:
   image: github.com/botless/slack/cmd/rtm/
   sink:
     apiVersion: eventing.knative.dev/v1alpha1
     kind: Channel
-    name: ray-chan
+    name: slack-in
   env:
+  - name: BOT_PORT
+    value: "8080"
   - name: BOT_TOKEN
     valueFrom:
       secretKeyRef:
@@ -32,3 +32,74 @@ spec:
       secretKeyRef:
         name: slack
         key: CHANNEL_ID
+---
+
+# Needed for the channel to POST to the source pod.
+apiVersion: v1
+kind: Service
+metadata:
+  name: slack
+spec:
+  selector:
+    source: slack
+  ports:
+  - protocol: TCP
+    port: 80
+    targetPort: 8080
+---
+
+# Events will be sent from Slack via slack-in
+apiVersion: eventing.knative.dev/v1alpha1
+kind: Channel
+metadata:
+  name: slack-in
+spec:
+  provisioner:
+    apiVersion: eventing.knative.dev/v1alpha1
+    kind: ClusterChannelProvisioner
+    name: in-memory-channel
+---
+
+# Events will be sent to Slack via slack-out
+apiVersion: eventing.knative.dev/v1alpha1
+kind: Channel
+metadata:
+  name: slack-out
+spec:
+  provisioner:
+    apiVersion: eventing.knative.dev/v1alpha1
+    kind: ClusterChannelProvisioner
+    name: in-memory-channel
+---
+
+# Ties the output of the slack-out channel back to Slack Source.
+apiVersion: eventing.knative.dev/v1alpha1
+kind: Subscription
+metadata:
+  name: slack-subscription
+spec:
+  channel:
+    apiVersion: eventing.knative.dev/v1alpha1
+    kind: Channel
+    name: slack-out
+  subscriber:
+    ref:
+      apiVersion: v1
+      kind: Service
+      name: slack
+---
+
+# Needed by the Slack Source to communicate with Slack.
+apiVersion: networking.istio.io/v1alpha3
+kind: ServiceEntry
+metadata:
+  name: slack-ext
+spec:
+  hosts:
+  - "*.slack.com"
+  - "slack.com"
+  ports:
+  - number: 443
+    name: https
+    protocol: HTTPS
+  location: MESH_EXTERNAL

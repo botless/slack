@@ -12,7 +12,7 @@ import (
 // https://api.slack.com/internal-integrations
 type envConfig struct {
 	// Port is server port to be listened.
-	Port string `envconfig:"PORT" default:"8081"`
+	Port string `envconfig:"BOT_PORT" default:"8080"`
 
 	// BotToken is bot user token to access to slack API.
 	BotToken string `envconfig:"BOT_TOKEN" required:"true"`
@@ -27,8 +27,8 @@ type envConfig struct {
 	// Bot responses to the mention in this channel.
 	ChannelID string `envconfig:"CHANNEL_ID"` // required:"true"`
 
-	// Target is the consumer of cloud events from the bot.
-	Target string `envconfig:"TARGET"` // required:"true"`
+	// Sink is the consumer of cloud events from the bot.
+	Sink string `envconfig:"SINK" required:"true"`
 }
 
 func main() {
@@ -42,7 +42,7 @@ func _main(args []string) int {
 		return 1
 	}
 
-	s := slack.New(env.BotToken, env.ChannelID, env.Target)
+	s := slack.New(env.BotToken, env.ChannelID, env.Sink, env.Port)
 
 	if err := <-s.Err; err != nil {
 		log.Printf("[ERROR] slack returned an error: %s", err)
@@ -50,3 +50,13 @@ func _main(args []string) int {
 	}
 	return 0
 }
+
+/*
+
+if strings.HasPrefix(ev.Text, "echo ") {
+				s.rtm.SendMessage(s.rtm.NewOutgoingMessage(
+					strings.Replace(ev.Text, "echo ", "", 1),
+					s.Channel))
+			}
+
+*/
