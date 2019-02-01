@@ -2,9 +2,7 @@ package main
 
 import (
 	"fmt"
-	"github.com/botless/slack/pkg/cloudevents"
-	ce "github.com/knative/pkg/cloudevents"
-	"log"
+	"github.com/knative/pkg/cloudevents"
 )
 
 type Example struct {
@@ -14,10 +12,11 @@ type Example struct {
 
 func main() {
 	c := cloudevents.NewClient(
-		"dev.knative.cloudevent.example",
-		"https://github.com/knative/pkg#cloudevents-example",
 		"http://localhost:8080",
-	)
+		cloudevents.Builder{
+			Source:    "https://github.com/knative/pkg#cloudevents-example",
+			EventType: "dev.knative.cloudevent.example",
+		})
 
 	for i := 0; i < 10; i++ {
 		data := &Example{
@@ -25,16 +24,12 @@ func main() {
 			Sequence: i,
 		}
 
-		if err := c.Client.Send(data, ce.V01EventContext{
+		if err := c.Send(data, cloudevents.V01EventContext{
 			Extensions: map[string]interface{}{
 				"example": "example_ext",
 			},
 		}); err != nil {
 			fmt.Printf("failed to send cloudevent: %v\n", err)
-		}
-
-		if err := c.Client.Send(data); err != nil {
-			log.Printf("error sending: %v", err)
 		}
 	}
 }
