@@ -26,19 +26,13 @@
 
 
 [[constraint]]
-  name = "github.com/google/uuid"
-  version = "1.1.0"
-
-[[constraint]]
-  branch = "master"
-  name = "github.com/knative/pkg"
-  #source = "github.com/n3wscott/pkg"
-
-
-[[constraint]]
   name = "github.com/nlopes/slack"
   version = "0.5.0"
 
 [prune]
   go-tests = true
   unused-packages = true
+
+[[constraint]]
+  name = "github.com/cloudevents/sdk-go"
+  revision = "d5bec7f75d038f3db120ad17507e1905b5eefbe9"

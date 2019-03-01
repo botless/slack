@@ -2,11 +2,9 @@ package main
 
 import (
 	"context"
+	"github.com/cloudevents/sdk-go/pkg/cloudevents"
+	"github.com/cloudevents/sdk-go/pkg/cloudevents/client"
 	"log"
-	"net/http"
-	"time"
-
-	"github.com/knative/pkg/cloudevents"
 )
 
 type Example struct {
@@ -14,18 +12,20 @@ type Example struct {
 	Message  string `json:"message"`
 }
 
-func handler(ctx context.Context, data *Example) {
-	metadata := cloudevents.FromContext(ctx)
-
-	log.Printf("[%s] %s %s: %d,%q", metadata.EventTime.Format(time.RFC3339), metadata.ContentType, metadata.Source, data.Sequence, data.Message)
-	if len(metadata.Extensions) > 0 {
-		for k, v := range metadata.Extensions {
-			log.Printf("\t[%s] %v", k, v)
-		}
+func receive(event cloudevents.Event) {
+	var data map[string]interface{}
+	if err := event.DataAs(&data); err != nil {
+		log.Printf("failed to get data: %s", err.Error())
 	}
+	log.Printf("got %s, %+v", event.String(), data)
 }
 
 func main() {
-	log.Print("ready and listening on port 8080")
-	log.Fatal(http.ListenAndServe(":8080", cloudevents.Handler(handler)))
+	ctx := context.Background()
+	_, err := client.StartHTTPReceiver(ctx, receive, client.WithHTTPPort(8080))
+	if err != nil {
+		log.Fatalf("Failed to create client: %s", err.Error())
+	}
+	log.Print("listening on port 8080")
+	<-ctx.Done()
 }
