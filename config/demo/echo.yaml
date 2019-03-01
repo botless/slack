@@ -13,7 +13,7 @@ spec:
             image: github.com/botless/slack/cmd/slack_echo/
             env:
               - name: TARGET
-                value: "http://slack-out-channel-76mlz.default.svc.cluster.local/" # <---------------   TODO: update this.
+                value: "http://slack-out-channel-7ls72.default.svc.cluster.local/" # <---------------   TODO: update this.
 ---
 apiVersion: eventing.knative.dev/v1alpha1
 kind: Subscription
