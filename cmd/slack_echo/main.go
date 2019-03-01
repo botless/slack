@@ -2,20 +2,22 @@ package main
 
 import (
 	"context"
-	"github.com/botless/slack/pkg/events"
-	"github.com/kelseyhightower/envconfig"
-	"github.com/knative/pkg/cloudevents"
-	"github.com/nlopes/slack"
 	"log"
-	"net/http"
 	"os"
 	"strings"
+
+	"github.com/botless/slack/pkg/events"
+	"github.com/cloudevents/sdk-go/pkg/cloudevents"
+	"github.com/cloudevents/sdk-go/pkg/cloudevents/client"
+	"github.com/cloudevents/sdk-go/pkg/cloudevents/types"
+	"github.com/kelseyhightower/envconfig"
 )
 
 type envConfig struct {
 	// Port is server port to be listened.
-	Port string `envconfig:"USER_PORT" default:"8080"`
+	Port int `envconfig:"USER_PORT" default:"8080"`
 
+	// Target is the endpoint to receive cloudevents.
 	Target string `envconfig:"TARGET" required:"true"`
 }
 
@@ -24,21 +26,29 @@ func main() {
 }
 
 type Echo struct {
-	ce *cloudevents.Client
+	ce client.Client
 }
 
-func (e *Echo) handler(ctx context.Context, msg *slack.Message) {
-	metadata := cloudevents.FromContext(ctx)
-	_ = metadata
+func (e *Echo) receive(event cloudevents.Event) {
+	msg := events.Message{}
+	if err := event.DataAs(&msg); err != nil {
+		log.Printf("failed to get data from cloudevent %s", event.String())
+	}
 
 	log.Printf("Message: %s", msg.Text)
 
 	if strings.HasPrefix(msg.Text, "echo ") {
-		resp := events.Response{
-			Channel: msg.Channel,
-			Text:    strings.Replace(msg.Text, "echo ", "", 1),
+		event := cloudevents.Event{
+			Context: cloudevents.EventContextV02{
+				Type:   events.ResponseEventType,
+				Source: *types.ParseURLRef("//botless/slack/echo"),
+			},
+			Data: events.Message{
+				Channel: msg.Channel,
+				Text:    strings.Replace(msg.Text, "echo ", "", 1),
+			},
 		}
-		if err := e.ce.Send(resp); err != nil {
+		if err := e.ce.Send(context.TODO(), event); err != nil {
 			log.Printf("failed to send cloudevent: %s\n", err)
 		}
 	}
@@ -51,15 +61,26 @@ func _main(args []string) int {
 		return 1
 	}
 
+	ce, err := client.NewHTTPClient(
+		client.WithTarget(env.Target),
+		client.WithHTTPPort(env.Port),
+		client.WithHTTPBinaryEncoding(),
+		client.WithTimeNow(),
+		client.WithUUIDs(),
+	)
+	if err != nil {
+		log.Fatalf("Failed to create client: %s", err.Error())
+	}
 	e := &Echo{
-		ce: cloudevents.NewClient(env.Target, cloudevents.Builder{
-			EventTypeVersion: "v1alpha1",
-			EventType:        events.ResponseEventType,
-			Source:           "slack.echo",
-		}),
+		ce: ce,
 	}
 
-	log.Print("listening on port 8080")
-	log.Fatal(http.ListenAndServe(":8080", cloudevents.Handler(e.handler)))
+	ctx := context.Background()
+	if err := e.ce.StartReceiver(ctx, e.receive); err != nil {
+		log.Fatalf("Failed to create client: %s", err.Error())
+	}
+	log.Printf("listening on port %d", env.Port)
+	<-ctx.Done()
+
 	return 0
 }

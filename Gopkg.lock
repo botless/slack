@@ -20,14 +20,6 @@
   revision = "d5bec7f75d038f3db120ad17507e1905b5eefbe9"
 
 [[projects]]
-  digest = "1:ffe9824d294da03b391f44e1ae8281281b4afc1bdaa9588c9097785e3af10cec"
-  name = "github.com/davecgh/go-spew"
-  packages = ["spew"]
-  pruneopts = "UT"
-  revision = "8991bc29aa16c548c550c7ff78260e27b9ab7c73"
-  version = "v1.1.1"
-
-[[projects]]
   digest = "1:236d7e1bdb50d8f68559af37dbcf9d142d56b431c9b2176d41e2a009b664cda8"
   name = "github.com/google/uuid"
   packages = ["."]
@@ -50,14 +42,6 @@
   pruneopts = "UT"
   revision = "f611eb38b3875cc3bd991ca91c51d06446afa14c"
   version = "v1.3.0"
-
-[[projects]]
-  branch = "master"
-  digest = "1:9db540abd5738d401bc5d0a7d5da3d861158ab2249e85eb02b8e70a7265588f3"
-  name = "github.com/knative/pkg"
-  packages = ["cloudevents"]
-  pruneopts = "UT"
-  revision = "819ebda80ca60ec95e67d8db23dec3f67828ccb5"
 
 [[projects]]
   digest = "1:2ca73053216eb11c8eea2855c8099ad82773638522f91cc0542ec9759163ff3c"
@@ -125,7 +109,6 @@
     "github.com/cloudevents/sdk-go/pkg/cloudevents/client",
     "github.com/cloudevents/sdk-go/pkg/cloudevents/types",
     "github.com/kelseyhightower/envconfig",
-    "github.com/knative/pkg/cloudevents",
     "github.com/nlopes/slack",
   ]
   solver-name = "gps-cdcl"

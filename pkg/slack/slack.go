@@ -4,13 +4,13 @@ import (
 	"context"
 	"fmt"
 	"github.com/botless/slack/pkg/events"
-	"github.com/knative/pkg/cloudevents"
+	"github.com/cloudevents/sdk-go/pkg/cloudevents"
+	"github.com/cloudevents/sdk-go/pkg/cloudevents/client"
+	"github.com/cloudevents/sdk-go/pkg/cloudevents/types"
 	"github.com/nlopes/slack"
 	"log"
-	"net/http"
 	"os"
 	"strings"
-	"time"
 )
 
 type Slack struct {
@@ -19,7 +19,7 @@ type Slack struct {
 
 	client *slack.Client
 	rtm    *slack.RTM
-	ce     *cloudevents.Client
+	ce     client.Client
 
 	domain string
 }
@@ -34,7 +34,7 @@ type Example struct {
 	Message  string `json:"message"`
 }
 
-func New(token, channel, target, port string) *Slack {
+func New(token, channel, target string, port int) *Slack {
 
 	s := &Slack{
 		Channel: channel,
@@ -47,17 +47,25 @@ func New(token, channel, target, port string) *Slack {
 		slack.OptionLog(log.New(os.Stdout, "slack-bot: ", log.Lshortfile|log.LstdFlags)),
 	)
 
-	s.ce = cloudevents.NewClient(target, cloudevents.Builder{
-		EventTypeVersion: "v1alpha1",
-	})
+	var err error
+	if s.ce, err = client.NewHTTPClient(
+		client.WithTarget(target),
+		client.WithHTTPBinaryEncoding(),
+		client.WithHTTPPort(port),
+		client.WithTimeNow(),
+		client.WithUUIDs(),
+	); err != nil {
+		log.Fatalf("failed to create client: %s", err.Error())
+	}
 
 	// Use RTM:
 	s.rtm = s.client.NewRTM()
 	go s.rtm.ManageConnection()
 	go s.manageRTM()
 
-	// CloudEvents incoming request // TODO: move this out.
-	go s.manageIncomingCloudEvents(port)
+	if err = s.ce.StartReceiver(context.TODO(), s.cloudEventReceiver); err != nil {
+		log.Fatalf("failed to start cloudevent reciever: %s", err.Error())
+	}
 
 	return s
 }
@@ -82,11 +90,14 @@ func (s *Slack) manageRTM() {
 
 		case *slack.MessageEvent:
 			fmt.Printf("Message: %v\n", ev)
-			source := fmt.Sprintf(source_template, s.domain, ev.Channel)
+			source := types.ParseURLRef(fmt.Sprintf(source_template, s.domain, ev.Channel))
 
-			if err := s.ce.Send(ev, cloudevents.V01EventContext{
-				EventType: eventType,
-				Source:    source,
+			if err := s.ce.Send(context.TODO(), cloudevents.Event{
+				Context: cloudevents.EventContextV02{
+					Type:   eventType,
+					Source: *source,
+				},
+				Data: ev,
 			}); err != nil {
 				fmt.Printf("failed to send cloudevent: %v\n", err)
 			}
@@ -112,13 +123,10 @@ func (s *Slack) manageRTM() {
 	}
 }
 
-func (s *Slack) manageIncomingCloudEvents(port string) {
-	log.Fatal(http.ListenAndServe(fmt.Sprintf(":%s", port), cloudevents.Handler(s.handleIncomingCloudEvent)))
-}
-
-func (s *Slack) handleIncomingCloudEvent(ctx context.Context, resp *events.Response) {
-	metadata := cloudevents.FromContext(ctx)
-	log.Printf("[%s] %s %s: %q", metadata.EventTime.Format(time.RFC3339), metadata.ContentType, metadata.Source, resp.Text)
-
+func (s *Slack) cloudEventReceiver(event cloudevents.Event) {
+	resp := events.Message{}
+	if err := event.DataAs(&resp); err != nil {
+		s.Err <- fmt.Errorf("failed to get data from cloudevent %s", event.String())
+	}
 	s.rtm.SendMessage(s.rtm.NewOutgoingMessage(resp.Text, resp.Channel))
 }
