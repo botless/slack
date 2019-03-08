@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"github.com/cloudevents/sdk-go/pkg/cloudevents"
 	"github.com/cloudevents/sdk-go/pkg/cloudevents/client"
+	clienthttp "github.com/cloudevents/sdk-go/pkg/cloudevents/client/http"
+	"github.com/cloudevents/sdk-go/pkg/cloudevents/transport/http"
 	"github.com/cloudevents/sdk-go/pkg/cloudevents/types"
 	"log"
 )
@@ -37,9 +39,9 @@ func defaultEventFields(event cloudevents.Event) cloudevents.Event {
 }
 
 func main() {
-	c, err := client.NewHTTPClient(
-		client.WithTarget("http://localhost:8080"),
-		client.WithHTTPBinaryEncoding(),
+	c, err := clienthttp.New(
+		http.WithTarget("http://localhost:8080"),
+		http.WithBinaryEncoding(),
 		client.WithEventDefaulter(defaultEventFields),
 		client.WithTimeNow(),
 		client.WithUUIDs(),
@@ -54,7 +56,7 @@ func main() {
 			Sequence: i,
 		}
 
-		if err := c.Send(context.TODO(), cloudevents.Event{Data: data}); err != nil {
+		if _, err := c.Send(context.TODO(), cloudevents.Event{Data: data}); err != nil {
 			fmt.Printf("failed to send cloudevent: %v\n", err)
 		}
 	}

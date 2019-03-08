@@ -2,15 +2,19 @@
 
 
 [[projects]]
-  digest = "1:287253c659d0385606da1ae3ed0c4d29906a56d88aa4496ae3b210996d12367c"
+  digest = "1:3f4e0df26a31e7b21aa85f4657725a6e749f42d455c94049d1bb42b614f8816f"
   name = "github.com/cloudevents/sdk-go"
   packages = [
     "pkg/cloudevents",
     "pkg/cloudevents/client",
+    "pkg/cloudevents/client/http",
+    "pkg/cloudevents/codec",
+    "pkg/cloudevents/context",
     "pkg/cloudevents/datacodec",
     "pkg/cloudevents/datacodec/json",
     "pkg/cloudevents/datacodec/xml",
     "pkg/cloudevents/transport",
+    "pkg/cloudevents/transport/http",
     "pkg/cloudevents/types",
   ]
   pruneopts = "UT"
@@ -66,6 +70,7 @@
   input-imports = [
     "github.com/cloudevents/sdk-go/pkg/cloudevents",
     "github.com/cloudevents/sdk-go/pkg/cloudevents/client",
+    "github.com/cloudevents/sdk-go/pkg/cloudevents/client/http",
     "github.com/cloudevents/sdk-go/pkg/cloudevents/types",
     "github.com/kelseyhightower/envconfig",
     "github.com/nlopes/slack",

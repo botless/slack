@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"github.com/cloudevents/sdk-go/pkg/cloudevents"
 	"github.com/cloudevents/sdk-go/pkg/cloudevents/client"
+	clienthttp "github.com/cloudevents/sdk-go/pkg/cloudevents/client/http"
+	"github.com/cloudevents/sdk-go/pkg/cloudevents/transport/http"
 	"github.com/cloudevents/sdk-go/pkg/cloudevents/types"
 	"github.com/nlopes/slack"
 	"log"
@@ -48,10 +50,10 @@ func New(token, channel, target string, port int) *Slack {
 	)
 
 	var err error
-	if s.ce, err = client.NewHTTPClient(
-		client.WithTarget(target),
-		client.WithHTTPBinaryEncoding(),
-		client.WithHTTPPort(port),
+	if s.ce, err = clienthttp.New(
+		http.WithTarget(target),
+		http.WithBinaryEncoding(),
+		http.WithPort(port),
 		client.WithTimeNow(),
 		client.WithUUIDs(),
 	); err != nil {
@@ -91,7 +93,7 @@ func (s *Slack) manageRTM() {
 		case *slack.MessageEvent:
 			source := types.ParseURLRef(fmt.Sprintf(slack_channel_source_template, s.domain, ev.Channel))
 
-			if err := s.ce.Send(context.TODO(), cloudevents.Event{
+			if _, err := s.ce.Send(context.TODO(), cloudevents.Event{
 				Context: cloudevents.EventContextV02{
 					Type:   eventType,
 					Source: *source,
@@ -107,7 +109,7 @@ func (s *Slack) manageRTM() {
 		case *slack.LatencyReport:
 			source := types.ParseURLRef(fmt.Sprintf(slack_source_template, s.domain))
 
-			if err := s.ce.Send(context.TODO(), cloudevents.Event{
+			if _, err := s.ce.Send(context.TODO(), cloudevents.Event{
 				Context: cloudevents.EventContextV02{
 					Type:   eventType,
 					Source: *source,

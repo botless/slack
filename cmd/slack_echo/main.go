@@ -9,6 +9,8 @@ import (
 	"github.com/botless/slack/pkg/events"
 	"github.com/cloudevents/sdk-go/pkg/cloudevents"
 	"github.com/cloudevents/sdk-go/pkg/cloudevents/client"
+	clienthttp "github.com/cloudevents/sdk-go/pkg/cloudevents/client/http"
+	"github.com/cloudevents/sdk-go/pkg/cloudevents/transport/http"
 	"github.com/cloudevents/sdk-go/pkg/cloudevents/types"
 	"github.com/kelseyhightower/envconfig"
 )
@@ -48,7 +50,7 @@ func (e *Echo) receive(event cloudevents.Event) {
 				Text:    strings.Replace(msg.Text, "echo ", "", 1),
 			},
 		}
-		if err := e.ce.Send(context.TODO(), event); err != nil {
+		if _, err := e.ce.Send(context.TODO(), event); err != nil {
 			log.Printf("failed to send cloudevent: %s\n", err)
 		}
 	}
@@ -61,10 +63,10 @@ func _main(args []string) int {
 		return 1
 	}
 
-	ce, err := client.NewHTTPClient(
-		client.WithTarget(env.Target),
-		client.WithHTTPPort(env.Port),
-		client.WithHTTPBinaryEncoding(),
+	ce, err := clienthttp.New(
+		http.WithTarget(env.Target),
+		http.WithPort(env.Port),
+		http.WithBinaryEncoding(),
 		client.WithTimeNow(),
 		client.WithUUIDs(),
 	)

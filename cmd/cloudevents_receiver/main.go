@@ -3,7 +3,8 @@ package main
 import (
 	"context"
 	"github.com/cloudevents/sdk-go/pkg/cloudevents"
-	"github.com/cloudevents/sdk-go/pkg/cloudevents/client"
+	clienthttp "github.com/cloudevents/sdk-go/pkg/cloudevents/client/http"
+	"github.com/cloudevents/sdk-go/pkg/cloudevents/transport/http"
 	"log"
 )
 
@@ -22,9 +23,14 @@ func receive(event cloudevents.Event) {
 
 func main() {
 	ctx := context.Background()
-	_, err := client.StartHTTPReceiver(ctx, receive, client.WithHTTPPort(8080))
+
+	c, err := clienthttp.New(http.WithPort(8080))
 	if err != nil {
 		log.Fatalf("Failed to create client: %s", err.Error())
+	}
+
+	if err := c.StartReceiver(ctx, receive); err != nil {
+		log.Fatalf("Failed to start reveiver client: %s", err.Error())
 	}
 	log.Print("listening on port 8080")
 	<-ctx.Done()
