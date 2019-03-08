@@ -2,6 +2,13 @@
 
 
 [[projects]]
+  digest = "1:7fe269fe9c598298a781468de683e428ea3ca1f0229df2320fa917ed63cee9ac"
+  name = "github.com/botless/events"
+  packages = ["pkg/events"]
+  pruneopts = "UT"
+  revision = "14f7cf42b916f88dfed5fc7e7d28c517d2d89073"
+
+[[projects]]
   digest = "1:3f4e0df26a31e7b21aa85f4657725a6e749f42d455c94049d1bb42b614f8816f"
   name = "github.com/cloudevents/sdk-go"
   packages = [
@@ -68,9 +75,11 @@
   analyzer-name = "dep"
   analyzer-version = 1
   input-imports = [
+    "github.com/botless/events/pkg/events",
     "github.com/cloudevents/sdk-go/pkg/cloudevents",
     "github.com/cloudevents/sdk-go/pkg/cloudevents/client",
     "github.com/cloudevents/sdk-go/pkg/cloudevents/client/http",
+    "github.com/cloudevents/sdk-go/pkg/cloudevents/transport/http",
     "github.com/cloudevents/sdk-go/pkg/cloudevents/types",
     "github.com/kelseyhightower/envconfig",
     "github.com/nlopes/slack",

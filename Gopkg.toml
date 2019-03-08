@@ -34,5 +34,5 @@
   unused-packages = true
 
 [[constraint]]
-  name = "github.com/cloudevents/sdk-go"
-  version = "0.3.0"
+  name = "github.com/botless/events"
+  revision = "14f7cf42b916f88dfed5fc7e7d28c517d2d89073"

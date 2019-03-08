@@ -3,15 +3,14 @@ package slack
 import (
 	"context"
 	"fmt"
+	"github.com/botless/events/pkg/events"
 	"github.com/cloudevents/sdk-go/pkg/cloudevents"
 	"github.com/cloudevents/sdk-go/pkg/cloudevents/client"
 	clienthttp "github.com/cloudevents/sdk-go/pkg/cloudevents/client/http"
 	"github.com/cloudevents/sdk-go/pkg/cloudevents/transport/http"
-	"github.com/cloudevents/sdk-go/pkg/cloudevents/types"
 	"github.com/nlopes/slack"
 	"log"
 	"os"
-	"strings"
 )
 
 type Slack struct {
@@ -23,17 +22,6 @@ type Slack struct {
 	ce     client.Client
 
 	domain string
-}
-
-const (
-	slack_channel_source_template = "https://%s.slack.com/messages/%s/" // domain, channel
-	slack_source_template         = "https://%s.slack.com/"             // domain
-	eventType_template            = "botless.slack.*s"
-)
-
-type Example struct {
-	Sequence int    `json:"id"`
-	Message  string `json:"message"`
 }
 
 func New(token, channel, target string, port int) *Slack {
@@ -80,23 +68,27 @@ func (s *Slack) manageRTM() {
 	for msg := range s.rtm.IncomingEvents {
 		fmt.Println("Event Received: ", msg.Type)
 
-		eventType := strings.ToLower(fmt.Sprintf(eventType_template, msg.Type))
-
 		switch ev := msg.Data.(type) {
 		case *slack.HelloEvent:
-			// Ignore hello
+			if _, err := s.ce.Send(context.TODO(), cloudevents.Event{
+				Context: cloudevents.EventContextV02{
+					Type:   events.Slack.Type(msg.Type),
+					Source: events.Slack.SourceForDomain(s.domain),
+				},
+				Data: ev,
+			}); err != nil {
+				fmt.Printf("failed to send cloudevent: %v\n", err)
+			}
 
 		case *slack.ConnectedEvent:
 			fmt.Println("Infos:", ev.Info)
 			fmt.Println("Connection counter:", ev.ConnectionCount)
 
 		case *slack.MessageEvent:
-			source := types.ParseURLRef(fmt.Sprintf(slack_channel_source_template, s.domain, ev.Channel))
-
 			if _, err := s.ce.Send(context.TODO(), cloudevents.Event{
 				Context: cloudevents.EventContextV02{
-					Type:   eventType,
-					Source: *source,
+					Type:   events.Slack.Type(msg.Type),
+					Source: events.Slack.SourceForChannel(s.domain, ev.Channel),
 				},
 				Data: ev,
 			}); err != nil {
@@ -107,12 +99,10 @@ func (s *Slack) manageRTM() {
 			fmt.Printf("Presence Change: %v\n", ev)
 
 		case *slack.LatencyReport:
-			source := types.ParseURLRef(fmt.Sprintf(slack_source_template, s.domain))
-
 			if _, err := s.ce.Send(context.TODO(), cloudevents.Event{
 				Context: cloudevents.EventContextV02{
-					Type:   eventType,
-					Source: *source,
+					Type:   events.Slack.Type(msg.Type),
+					Source: events.Slack.SourceForDomain(s.domain),
 				},
 				Data: ev,
 			}); err != nil {

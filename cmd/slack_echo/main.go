@@ -2,11 +2,11 @@ package main
 
 import (
 	"context"
+	"github.com/botless/events/pkg/events"
 	"log"
 	"os"
 	"strings"
 
-	"github.com/botless/slack/pkg/events"
 	"github.com/cloudevents/sdk-go/pkg/cloudevents"
 	"github.com/cloudevents/sdk-go/pkg/cloudevents/client"
 	clienthttp "github.com/cloudevents/sdk-go/pkg/cloudevents/client/http"
@@ -42,7 +42,7 @@ func (e *Echo) receive(event cloudevents.Event) {
 	if strings.HasPrefix(msg.Text, "echo ") {
 		event := cloudevents.Event{
 			Context: cloudevents.EventContextV02{
-				Type:   events.ResponseEventType,
+				Type:   events.Bot.Type("response"),
 				Source: *types.ParseURLRef("//botless/slack/echo"),
 			},
 			Data: events.Message{
