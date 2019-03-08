@@ -3,7 +3,6 @@ package slack
 import (
 	"context"
 	"fmt"
-	"github.com/botless/slack/pkg/events"
 	"github.com/cloudevents/sdk-go/pkg/cloudevents"
 	"github.com/cloudevents/sdk-go/pkg/cloudevents/client"
 	"github.com/cloudevents/sdk-go/pkg/cloudevents/types"
@@ -25,8 +24,9 @@ type Slack struct {
 }
 
 const (
-	source_template    = "https://%s.slack.com/messages/%s/" // domain, channel
-	eventType_template = "botless.slack.*s"
+	slack_channel_source_template = "https://%s.slack.com/messages/%s/" // domain, channel
+	slack_source_template         = "https://%s.slack.com/"             // domain
+	eventType_template            = "botless.slack.*s"
 )
 
 type Example struct {
@@ -89,8 +89,7 @@ func (s *Slack) manageRTM() {
 			fmt.Println("Connection counter:", ev.ConnectionCount)
 
 		case *slack.MessageEvent:
-			fmt.Printf("Message: %v\n", ev)
-			source := types.ParseURLRef(fmt.Sprintf(source_template, s.domain, ev.Channel))
+			source := types.ParseURLRef(fmt.Sprintf(slack_channel_source_template, s.domain, ev.Channel))
 
 			if err := s.ce.Send(context.TODO(), cloudevents.Event{
 				Context: cloudevents.EventContextV02{
@@ -106,7 +105,17 @@ func (s *Slack) manageRTM() {
 			fmt.Printf("Presence Change: %v\n", ev)
 
 		case *slack.LatencyReport:
-			fmt.Printf("Current latency: %v\n", ev.Value)
+			source := types.ParseURLRef(fmt.Sprintf(slack_source_template, s.domain))
+
+			if err := s.ce.Send(context.TODO(), cloudevents.Event{
+				Context: cloudevents.EventContextV02{
+					Type:   eventType,
+					Source: *source,
+				},
+				Data: ev,
+			}); err != nil {
+				fmt.Printf("failed to send cloudevent: %v\n", err)
+			}
 
 		case *slack.RTMError:
 			fmt.Printf("Error: %s\n", ev.Error())
@@ -121,12 +130,4 @@ func (s *Slack) manageRTM() {
 			fmt.Printf("Unexpected: %v\n", msg.Data)
 		}
 	}
-}
-
-func (s *Slack) cloudEventReceiver(event cloudevents.Event) {
-	resp := events.Message{}
-	if err := event.DataAs(&resp); err != nil {
-		s.Err <- fmt.Errorf("failed to get data from cloudevent %s", event.String())
-	}
-	s.rtm.SendMessage(s.rtm.NewOutgoingMessage(resp.Text, resp.Channel))
 }

@@ -35,4 +35,4 @@
 
 [[constraint]]
   name = "github.com/cloudevents/sdk-go"
-  revision = "d5bec7f75d038f3db120ad17507e1905b5eefbe9"
+  version = "0.3.0"

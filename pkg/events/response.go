@@ -1,7 +1,9 @@
 package events
 
 const (
+	MessageEventType  = "botless.slack.message"
 	ResponseEventType = "botless.slack.response"
+	WelcomeEventType  = "botless.slack.welcome"
 )
 
 // Message, start simple.
