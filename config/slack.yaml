@@ -5,10 +5,8 @@ metadata:
   name: slack
 spec:
   image: github.com/botless/slack/cmd/rtm/
-  sink:
-    apiVersion: eventing.knative.dev/v1alpha1
-    kind: Channel
-    name: slack-in
+  args: 
+    - '--sink=http://default-broker.default.svc.cluster.local'
   env:
   - name: BOT_PORT
     value: "8080"
@@ -34,7 +32,7 @@ spec:
         key: CHANNEL_ID
 ---
 
-# Needed for the channel to POST to the source pod.
+# Needed for the broker to POST to the source pod.
 apiVersion: v1
 kind: Service
 metadata:
@@ -48,45 +46,20 @@ spec:
     targetPort: 8080
 ---
 
-# Events will be sent from Slack via slack-in
 apiVersion: eventing.knative.dev/v1alpha1
-kind: Channel
+kind: Trigger
 metadata:
-  name: slack-in
+  name: slack-response
 spec:
-  provisioner:
-    apiVersion: eventing.knative.dev/v1alpha1
-    kind: ClusterChannelProvisioner
-    name: in-memory-channel
----
-
-# Events will be sent to Slack via slack-out
-apiVersion: eventing.knative.dev/v1alpha1
-kind: Channel
-metadata:
-  name: slack-out
-spec:
-  provisioner:
-    apiVersion: eventing.knative.dev/v1alpha1
-    kind: ClusterChannelProvisioner
-    name: in-memory-channel
----
-
-# Ties the output of the slack-out channel back to Slack Source.
-apiVersion: eventing.knative.dev/v1alpha1
-kind: Subscription
-metadata:
-  name: slack-subscription
-spec:
-  channel:
-    apiVersion: eventing.knative.dev/v1alpha1
-    kind: Channel
-    name: slack-out
+  filter:
+    sourceAndType:
+      type: botless.bot.response
   subscriber:
     ref:
       apiVersion: v1
       kind: Service
       name: slack
+
 ---
 
 # Needed by the Slack Source to communicate with Slack.
