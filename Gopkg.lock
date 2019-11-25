@@ -2,31 +2,48 @@
 
 
 [[projects]]
-  digest = "1:7fe269fe9c598298a781468de683e428ea3ca1f0229df2320fa917ed63cee9ac"
+  digest = "1:9f3b30d9f8e0d7040f729b82dcbc8f0dead820a133b3147ce355fc451f32d761"
+  name = "github.com/BurntSushi/toml"
+  packages = ["."]
+  pruneopts = "UT"
+  revision = "3012a1dbe2e4bd1391d42b32f0577cb7bbc7f005"
+  version = "v0.3.1"
+
+[[projects]]
+  digest = "1:cd753c171257b57ecdc78afbc7895bad1db5b0646eec0f9913eae1b4513b7dda"
   name = "github.com/botless/events"
   packages = ["pkg/events"]
   pruneopts = "UT"
-  revision = "14f7cf42b916f88dfed5fc7e7d28c517d2d89073"
+  revision = "d838d0665d9f35c151aad8d2275e9b2abf211569"
 
 [[projects]]
-  digest = "1:3f4e0df26a31e7b21aa85f4657725a6e749f42d455c94049d1bb42b614f8816f"
+  digest = "1:078db1588b2eca641aadbfd9b5b913417d6a49c3af482c84688c9878d2880561"
   name = "github.com/cloudevents/sdk-go"
   packages = [
+    ".",
     "pkg/cloudevents",
     "pkg/cloudevents/client",
-    "pkg/cloudevents/client/http",
-    "pkg/cloudevents/codec",
     "pkg/cloudevents/context",
     "pkg/cloudevents/datacodec",
     "pkg/cloudevents/datacodec/json",
+    "pkg/cloudevents/datacodec/text",
     "pkg/cloudevents/datacodec/xml",
+    "pkg/cloudevents/observability",
     "pkg/cloudevents/transport",
     "pkg/cloudevents/transport/http",
     "pkg/cloudevents/types",
   ]
   pruneopts = "UT"
-  revision = "965e37cc1790bf9c4920b429c8005e78c722c33c"
-  version = "0.3.0"
+  revision = "2fa4bb1fbb4aac4d906b0173a2a408f701439b82"
+  version = "v0.10.0"
+
+[[projects]]
+  branch = "master"
+  digest = "1:b7cb6054d3dff43b38ad2e92492f220f57ae6087ee797dca298139776749ace8"
+  name = "github.com/golang/groupcache"
+  packages = ["lru"]
+  pruneopts = "UT"
+  revision = "611e8accdfc92c4187d399e95ce826046d4c8d73"
 
 [[projects]]
   digest = "1:236d7e1bdb50d8f68559af37dbcf9d142d56b431c9b2176d41e2a009b664cda8"
@@ -53,6 +70,17 @@
   version = "v1.3.0"
 
 [[projects]]
+  branch = "master"
+  digest = "1:4c44f6340c3695380a4d9bd5c5c776cda1af42974cc7d485683908526c7b4fd0"
+  name = "github.com/mattmoor/bindings"
+  packages = [
+    "pkg/bindings",
+    "pkg/slack",
+  ]
+  pruneopts = "UT"
+  revision = "a191c6fd1f7b96f9d3a1449ccac7f86d1e7bc41c"
+
+[[projects]]
   digest = "1:7711bc85fa91b919713feda232ffe0bd4ebb0e8426b9c0de6c6f476e0eb9b7c2"
   name = "github.com/nlopes/slack"
   packages = [
@@ -71,17 +99,147 @@
   revision = "ba968bfe8b2f7e042a574c888954fccecfa385b4"
   version = "v0.8.1"
 
+[[projects]]
+  digest = "1:466793fb60a8af60da5780a33ef3e24352eca3f8c8b51cdadb596b86cf8abbea"
+  name = "go.opencensus.io"
+  packages = [
+    ".",
+    "internal",
+    "internal/tagencoding",
+    "metric/metricdata",
+    "metric/metricproducer",
+    "resource",
+    "stats",
+    "stats/internal",
+    "stats/view",
+    "tag",
+    "trace",
+    "trace/internal",
+    "trace/tracestate",
+  ]
+  pruneopts = "UT"
+  revision = "aad2c527c5defcf89b5afab7f37274304195a6b2"
+  version = "v0.22.2"
+
+[[projects]]
+  digest = "1:0bdcb0c740d79d400bd3f7946ac22a715c94db62b20bfd2e01cd50693aba0600"
+  name = "go.uber.org/atomic"
+  packages = ["."]
+  pruneopts = "UT"
+  revision = "9dc4df04d0d1c39369750a9f6c32c39560672089"
+  version = "v1.5.0"
+
+[[projects]]
+  digest = "1:e6d88834deb4e35eb998c74f4d042db6ccecaaf62c0f6d57905852800994af00"
+  name = "go.uber.org/multierr"
+  packages = ["."]
+  pruneopts = "UT"
+  revision = "824d08f79702fe5f54aca8400aa0d754318786e7"
+  version = "v1.4.0"
+
+[[projects]]
+  branch = "master"
+  digest = "1:3032e90a153750ea149f68bf081f97ca738f041fba45c41c80737f572ffdf2f4"
+  name = "go.uber.org/tools"
+  packages = ["update-license"]
+  pruneopts = "UT"
+  revision = "2cfd321de3ee5d5f8a5fda2521d1703478334d98"
+
+[[projects]]
+  digest = "1:260048b6193e304ee294452a9e3410c474e3ce187248c7e2e4a2631207386f74"
+  name = "go.uber.org/zap"
+  packages = [
+    ".",
+    "buffer",
+    "internal/bufferpool",
+    "internal/color",
+    "internal/exit",
+    "zapcore",
+  ]
+  pruneopts = "UT"
+  revision = "33e58d4d0120aa28d4df84cd244838c490846c9d"
+  version = "v1.13.0"
+
+[[projects]]
+  branch = "master"
+  digest = "1:21d7bad9b7da270fd2d50aba8971a041bd691165c95096a2a4c68db823cbc86a"
+  name = "golang.org/x/lint"
+  packages = [
+    ".",
+    "golint",
+  ]
+  pruneopts = "UT"
+  revision = "16217165b5de779cb6a5e4fc81fa9c1166fda457"
+
+[[projects]]
+  branch = "master"
+  digest = "1:49aa65e95f101c313ab9da226beeb48709ec3a1b056073253f2f3874f0fb738c"
+  name = "golang.org/x/tools"
+  packages = [
+    "go/analysis",
+    "go/analysis/passes/inspect",
+    "go/ast/astutil",
+    "go/ast/inspector",
+    "go/buildutil",
+    "go/gcexportdata",
+    "go/internal/gcimporter",
+    "go/internal/packagesdriver",
+    "go/packages",
+    "go/types/objectpath",
+    "go/types/typeutil",
+    "internal/fastwalk",
+    "internal/gopathwalk",
+    "internal/semver",
+    "internal/span",
+  ]
+  pruneopts = "UT"
+  revision = "13f8be5f577fc5865388af8a4818b44dce211b11"
+
+[[projects]]
+  digest = "1:131158a88aad1f94854d0aa21a64af2802d0a470fb0f01cb33c04fafd2047111"
+  name = "honnef.co/go/tools"
+  packages = [
+    "arg",
+    "cmd/staticcheck",
+    "config",
+    "deprecated",
+    "facts",
+    "functions",
+    "go/types/typeutil",
+    "internal/cache",
+    "internal/passes/buildssa",
+    "internal/renameio",
+    "internal/sharedcheck",
+    "lint",
+    "lint/lintdsl",
+    "lint/lintutil",
+    "lint/lintutil/format",
+    "loader",
+    "printf",
+    "simple",
+    "ssa",
+    "ssautil",
+    "staticcheck",
+    "staticcheck/vrp",
+    "stylecheck",
+    "unused",
+    "version",
+  ]
+  pruneopts = "UT"
+  revision = "afd67930eec2a9ed3e9b19f684d17a062285f16a"
+  version = "2019.2.3"
+
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
   input-imports = [
     "github.com/botless/events/pkg/events",
+    "github.com/cloudevents/sdk-go",
     "github.com/cloudevents/sdk-go/pkg/cloudevents",
     "github.com/cloudevents/sdk-go/pkg/cloudevents/client",
-    "github.com/cloudevents/sdk-go/pkg/cloudevents/client/http",
     "github.com/cloudevents/sdk-go/pkg/cloudevents/transport/http",
-    "github.com/cloudevents/sdk-go/pkg/cloudevents/types",
     "github.com/kelseyhightower/envconfig",
+    "github.com/mattmoor/bindings/pkg/slack",
     "github.com/nlopes/slack",
   ]
   solver-name = "gps-cdcl"

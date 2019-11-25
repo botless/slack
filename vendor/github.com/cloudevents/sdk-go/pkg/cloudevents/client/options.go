@@ -4,6 +4,7 @@ import (
 	"fmt"
 )
 
+// Option is the function signature required to be considered an client.Option.
 type Option func(*ceClient) error
 
 // WithEventDefaulter adds an event defaulter to the end of the defaulter chain.
@@ -31,6 +32,22 @@ func WithUUIDs() Option {
 func WithTimeNow() Option {
 	return func(c *ceClient) error {
 		c.eventDefaulterFns = append(c.eventDefaulterFns, DefaultTimeToNowIfNotSet)
+		return nil
+	}
+}
+
+// WithConverterFn defines the function the transport will use to delegate
+// conversion of non-decodable messages.
+func WithConverterFn(fn ConvertFn) Option {
+	return func(c *ceClient) error {
+		if fn == nil {
+			return fmt.Errorf("client option was given an nil message converter")
+		}
+		if c.transport.HasConverter() {
+			return fmt.Errorf("transport converter already set")
+		}
+		c.convertFn = fn
+		c.transport.SetConverter(c)
 		return nil
 	}
 }

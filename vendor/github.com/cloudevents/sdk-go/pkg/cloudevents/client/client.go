@@ -3,17 +3,23 @@ package client
 import (
 	"context"
 	"fmt"
+	"sync"
+
 	"github.com/cloudevents/sdk-go/pkg/cloudevents"
+	"github.com/cloudevents/sdk-go/pkg/cloudevents/observability"
 	"github.com/cloudevents/sdk-go/pkg/cloudevents/transport"
+	"github.com/cloudevents/sdk-go/pkg/cloudevents/transport/http"
 )
 
+// Client interface defines the runtime contract the CloudEvents client supports.
 type Client interface {
 	// Send will transmit the given event over the client's configured transport.
-	Send(ctx context.Context, event cloudevents.Event) (*cloudevents.Event, error)
+	Send(ctx context.Context, event cloudevents.Event) (context.Context, *cloudevents.Event, error)
 
 	// StartReceiver will register the provided function for callback on receipt
 	// of a cloudevent. It will also start the underlying transport as it has
 	// been configured.
+	// This call is blocking.
 	// Valid fn signatures are:
 	// * func()
 	// * func() error
@@ -30,12 +36,10 @@ type Client interface {
 	// Note: if fn returns an error, it is treated as a critical and
 	// EventResponse will not be processed.
 	StartReceiver(ctx context.Context, fn interface{}) error
-
-	// StopReceiver will stop the underlying transport and deregister the
-	// previously provided receiver fn.
-	StopReceiver(ctx context.Context) error
 }
 
+// New produces a new client with the provided transport object and applied
+// client options.
 func New(t transport.Transport, opts ...Option) (Client, error) {
 	c := &ceClient{
 		transport: t,
@@ -47,27 +51,64 @@ func New(t transport.Transport, opts ...Option) (Client, error) {
 	return c, nil
 }
 
+// NewDefault provides the good defaults for the common case using an HTTP
+// Transport client. The http transport has had WithBinaryEncoding http
+// transport option applied to it. The client will always send Binary
+// encoding but will inspect the outbound event context and match the version.
+// The WithtimeNow and WithUUIDs client options are also applied to the client,
+// all outbound events will have a time and id set if not already present.
+func NewDefault() (Client, error) {
+	t, err := http.New(http.WithBinaryEncoding())
+	if err != nil {
+		return nil, err
+	}
+	c, err := New(t, WithTimeNow(), WithUUIDs())
+	if err != nil {
+		return nil, err
+	}
+	return c, nil
+}
+
 type ceClient struct {
 	transport transport.Transport
 	fn        *receiverFn
 
+	convertFn ConvertFn
+
+	receiverMu        sync.Mutex
 	eventDefaulterFns []EventDefaulter
 }
 
-func (c *ceClient) Send(ctx context.Context, event cloudevents.Event) (*cloudevents.Event, error) {
+// Send transmits the provided event on a preconfigured Transport.
+// Send returns a response event if there is a response or an error if there
+// was an an issue validating the outbound event or the transport returns an
+// error.
+func (c *ceClient) Send(ctx context.Context, event cloudevents.Event) (context.Context, *cloudevents.Event, error) {
+	ctx, r := observability.NewReporter(ctx, reportSend)
+	rctx, resp, err := c.obsSend(ctx, event)
+	if err != nil {
+		r.Error()
+	} else {
+		r.OK()
+	}
+	return rctx, resp, err
+}
+
+func (c *ceClient) obsSend(ctx context.Context, event cloudevents.Event) (context.Context, *cloudevents.Event, error) {
 	// Confirm we have a transport set.
 	if c.transport == nil {
-		return nil, fmt.Errorf("client not ready, transport not initialized")
+		return ctx, nil, fmt.Errorf("client not ready, transport not initialized")
 	}
 	// Apply the defaulter chain to the incoming event.
 	if len(c.eventDefaulterFns) > 0 {
 		for _, fn := range c.eventDefaulterFns {
-			event = fn(event)
+			event = fn(ctx, event)
 		}
 	}
+
 	// Validate the event conforms to the CloudEvents Spec.
 	if err := event.Validate(); err != nil {
-		return nil, err
+		return ctx, nil, err
 	}
 	// Send the event over the transport.
 	return c.transport.Send(ctx, event)
@@ -75,12 +116,30 @@ func (c *ceClient) Send(ctx context.Context, event cloudevents.Event) (*cloudeve
 
 // Receive is called from from the transport on event delivery.
 func (c *ceClient) Receive(ctx context.Context, event cloudevents.Event, resp *cloudevents.EventResponse) error {
+	ctx, r := observability.NewReporter(ctx, reportReceive)
+	err := c.obsReceive(ctx, event, resp)
+	if err != nil {
+		r.Error()
+	} else {
+		r.OK()
+	}
+	return err
+}
+
+func (c *ceClient) obsReceive(ctx context.Context, event cloudevents.Event, resp *cloudevents.EventResponse) error {
 	if c.fn != nil {
+		ctx, rFn := observability.NewReporter(ctx, reportReceiveFn)
 		err := c.fn.invoke(ctx, event, resp)
+		if err != nil {
+			rFn.Error()
+		} else {
+			rFn.OK()
+		}
+
 		// Apply the defaulter chain to the outgoing event.
 		if err == nil && resp != nil && resp.Event != nil && len(c.eventDefaulterFns) > 0 {
 			for _, fn := range c.eventDefaulterFns {
-				*resp.Event = fn(*resp.Event)
+				*resp.Event = fn(ctx, *resp.Event)
 			}
 			// Validate the event conforms to the CloudEvents Spec.
 			if err := resp.Event.Validate(); err != nil {
@@ -92,7 +151,12 @@ func (c *ceClient) Receive(ctx context.Context, event cloudevents.Event, resp *c
 	return nil
 }
 
+// StartReceiver sets up the given fn to handle Receive.
+// See Client.StartReceiver for details. This is a blocking call.
 func (c *ceClient) StartReceiver(ctx context.Context, fn interface{}) error {
+	c.receiverMu.Lock()
+	defer c.receiverMu.Unlock()
+
 	if c.transport == nil {
 		return fmt.Errorf("client not ready, transport not initialized")
 	}
@@ -106,17 +170,11 @@ func (c *ceClient) StartReceiver(ctx context.Context, fn interface{}) error {
 		c.fn = fn
 	}
 
+	defer func() {
+		c.fn = nil
+	}()
+
 	return c.transport.StartReceiver(ctx)
-}
-
-func (c *ceClient) StopReceiver(ctx context.Context) error {
-	if c.transport == nil {
-		return fmt.Errorf("client not ready, transport not initialized")
-	}
-
-	err := c.transport.StopReceiver(ctx)
-	c.fn = nil
-	return err
 }
 
 func (c *ceClient) applyOptions(opts ...Option) error {
@@ -126,4 +184,12 @@ func (c *ceClient) applyOptions(opts ...Option) error {
 		}
 	}
 	return nil
+}
+
+// Convert implements transport Converter.Convert.
+func (c *ceClient) Convert(ctx context.Context, m transport.Message, err error) (*cloudevents.Event, error) {
+	if c.convertFn != nil {
+		return c.convertFn(ctx, m, err)
+	}
+	return nil, err
 }

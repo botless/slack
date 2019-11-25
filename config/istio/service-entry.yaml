@@ -1,0 +1,14 @@
+# Needed by the Slack Source to communicate with Slack.
+apiVersion: networking.istio.io/v1alpha3
+kind: ServiceEntry
+metadata:
+  name: slack-ext
+spec:
+  hosts:
+    - "*.slack.com"
+    - "slack.com"
+  ports:
+    - number: 443
+      name: https
+      protocol: HTTPS
+  location: MESH_EXTERNAL

@@ -1,55 +1,95 @@
 package http
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
-	"github.com/cloudevents/sdk-go/pkg/cloudevents"
-	"github.com/cloudevents/sdk-go/pkg/cloudevents/codec"
-	"github.com/cloudevents/sdk-go/pkg/cloudevents/transport"
-	"github.com/cloudevents/sdk-go/pkg/cloudevents/types"
-	"log"
 	"net/http"
 	"net/textproto"
 	"strings"
+
+	"github.com/cloudevents/sdk-go/pkg/cloudevents"
+	cecontext "github.com/cloudevents/sdk-go/pkg/cloudevents/context"
+	"github.com/cloudevents/sdk-go/pkg/cloudevents/observability"
+	"github.com/cloudevents/sdk-go/pkg/cloudevents/transport"
+	"github.com/cloudevents/sdk-go/pkg/cloudevents/types"
 )
 
+// CodecV02 represents a http transport codec that uses CloudEvents spec v0.2
 type CodecV02 struct {
-	Encoding Encoding
+	CodecStructured
+
+	DefaultEncoding Encoding
 }
 
+// Adheres to Codec
 var _ transport.Codec = (*CodecV02)(nil)
 
-func (v CodecV02) Encode(e cloudevents.Event) (transport.Message, error) {
-	switch v.Encoding {
+// Encode implements Codec.Encode
+func (v CodecV02) Encode(ctx context.Context, e cloudevents.Event) (transport.Message, error) {
+	encoding := v.DefaultEncoding
+	strEnc := cecontext.EncodingFrom(ctx)
+	if strEnc != "" {
+		switch strEnc {
+		case Binary:
+			encoding = BinaryV02
+		case Structured:
+			encoding = StructuredV02
+		}
+	}
+
+	_, r := observability.NewReporter(ctx, CodecObserved{o: reportEncode, c: encoding.Codec()})
+	m, err := v.obsEncode(ctx, e, encoding)
+	if err != nil {
+		r.Error()
+	} else {
+		r.OK()
+	}
+	return m, err
+}
+
+func (v CodecV02) obsEncode(ctx context.Context, e cloudevents.Event, encoding Encoding) (transport.Message, error) {
+	switch encoding {
 	case Default:
 		fallthrough
 	case BinaryV02:
-		return v.encodeBinary(e)
+		return v.encodeBinary(ctx, e)
 	case StructuredV02:
-		return v.encodeStructured(e)
+		return v.encodeStructured(ctx, e)
 	default:
-		return nil, fmt.Errorf("unknown encoding: %d", v.Encoding)
+		return nil, fmt.Errorf("unknown encoding: %d", encoding)
 	}
 }
 
-func (v CodecV02) Decode(msg transport.Message) (*cloudevents.Event, error) {
-	switch v.inspectEncoding(msg) {
+// Decode implements Codec.Decode
+func (v CodecV02) Decode(ctx context.Context, msg transport.Message) (*cloudevents.Event, error) {
+	_, r := observability.NewReporter(ctx, CodecObserved{o: reportDecode, c: v.inspectEncoding(ctx, msg).Codec()}) // TODO: inspectEncoding is not free.
+	e, err := v.obsDecode(ctx, msg)
+	if err != nil {
+		r.Error()
+	} else {
+		r.OK()
+	}
+	return e, err
+}
+
+func (v CodecV02) obsDecode(ctx context.Context, msg transport.Message) (*cloudevents.Event, error) {
+	switch v.inspectEncoding(ctx, msg) {
 	case BinaryV02:
-		return v.decodeBinary(msg)
+		return v.decodeBinary(ctx, msg)
 	case StructuredV02:
-		return v.decodeStructured(msg)
+		return v.decodeStructured(ctx, cloudevents.CloudEventsVersionV02, msg)
 	default:
-		return nil, fmt.Errorf("unknown encoding for message %v", msg)
+		return nil, transport.NewErrMessageEncodingUnknown("v02", TransportName)
 	}
 }
 
-func (v CodecV02) encodeBinary(e cloudevents.Event) (transport.Message, error) {
+func (v CodecV02) encodeBinary(ctx context.Context, e cloudevents.Event) (transport.Message, error) {
 	header, err := v.toHeaders(e.Context.AsV02())
 	if err != nil {
 		return nil, err
 	}
-
-	body, err := marshalEventData(e.Context.GetDataMediaType(), e.Data)
+	body, err := e.DataBytes()
 	if err != nil {
 		return nil, err
 	}
@@ -62,7 +102,7 @@ func (v CodecV02) encodeBinary(e cloudevents.Event) (transport.Message, error) {
 	return msg, nil
 }
 
-func (v CodecV02) toHeaders(ec cloudevents.EventContextV02) (http.Header, error) {
+func (v CodecV02) toHeaders(ec *cloudevents.EventContextV02) (http.Header, error) {
 	h := http.Header{}
 	h.Set("ce-specversion", ec.SpecVersion)
 	h.Set("ce-type", ec.Type)
@@ -74,13 +114,8 @@ func (v CodecV02) toHeaders(ec cloudevents.EventContextV02) (http.Header, error)
 	if ec.SchemaURL != nil {
 		h.Set("ce-schemaurl", ec.SchemaURL.String())
 	}
-	if ec.ContentType != nil {
+	if ec.ContentType != nil && *ec.ContentType != "" {
 		h.Set("Content-Type", *ec.ContentType)
-	} else if v.Encoding == Default || v.Encoding == BinaryV02 {
-		// in binary v0.2, the Content-Type header is tied to ec.ContentType
-		// This was later found to be an issue with the spec, but yolo.
-		// TODO: not sure what the default should be?
-		h.Set("Content-Type", cloudevents.ApplicationJSON)
 	}
 	for k, v := range ec.Extensions {
 		// Per spec, map-valued extensions are converted to a list of headers as:
@@ -105,29 +140,12 @@ func (v CodecV02) toHeaders(ec cloudevents.EventContextV02) (http.Header, error)
 	return h, nil
 }
 
-func (v CodecV02) encodeStructured(e cloudevents.Event) (transport.Message, error) {
-	header := http.Header{}
-	header.Set("Content-Type", "application/cloudevents+json")
-
-	body, err := codec.JsonEncodeV02(e)
-	if err != nil {
-		return nil, err
-	}
-
-	msg := &Message{
-		Header: header,
-		Body:   body,
-	}
-
-	return msg, nil
-}
-
-func (v CodecV02) decodeBinary(msg transport.Message) (*cloudevents.Event, error) {
+func (v CodecV02) decodeBinary(ctx context.Context, msg transport.Message) (*cloudevents.Event, error) {
 	m, ok := msg.(*Message)
 	if !ok {
 		return nil, fmt.Errorf("failed to convert transport.Message to http.Message")
 	}
-	ctx, err := v.fromHeaders(m.Header)
+	ca, err := v.fromHeaders(m.Header)
 	if err != nil {
 		return nil, err
 	}
@@ -136,8 +154,9 @@ func (v CodecV02) decodeBinary(msg transport.Message) (*cloudevents.Event, error
 		body = m.Body
 	}
 	return &cloudevents.Event{
-		Context: ctx,
-		Data:    body,
+		Context:     &ca,
+		Data:        body,
+		DataEncoded: body != nil,
 	}, nil
 }
 
@@ -146,7 +165,6 @@ func (v CodecV02) fromHeaders(h http.Header) (cloudevents.EventContextV02, error
 	for k, v := range h {
 		ck := textproto.CanonicalMIMEHeaderKey(k)
 		if k != ck {
-			log.Printf("[warn] received header with non-canonical form; canonical: %q, got %q", ck, k)
 			delete(h, k)
 			h[ck] = v
 		}
@@ -169,7 +187,11 @@ func (v CodecV02) fromHeaders(h http.Header) (cloudevents.EventContextV02, error
 	}
 	h.Del("ce-source")
 
-	ec.Time = types.ParseTimestamp(h.Get("ce-time"))
+	var err error
+	ec.Time, err = types.ParseTimestamp(h.Get("ce-time"))
+	if err != nil {
+		return ec, err
+	}
 	h.Del("ce-time")
 
 	ec.SchemaURL = types.ParseURLRef(h.Get("ce-schemaurl"))
@@ -222,34 +244,7 @@ func (v CodecV02) fromHeaders(h http.Header) (cloudevents.EventContextV02, error
 	return ec, nil
 }
 
-func (v CodecV02) decodeStructured(msg transport.Message) (*cloudevents.Event, error) {
-	m, ok := msg.(*Message)
-	if !ok {
-		return nil, fmt.Errorf("failed to convert transport.Message to http.Message")
-	}
-
-	ec := cloudevents.EventContextV02{}
-	if err := json.Unmarshal(m.Body, &ec); err != nil {
-		return nil, err
-	}
-
-	raw := make(map[string]json.RawMessage)
-
-	if err := json.Unmarshal(m.Body, &raw); err != nil {
-		return nil, err
-	}
-	var data interface{}
-	if d, ok := raw["data"]; ok {
-		data = []byte(d)
-	}
-
-	return &cloudevents.Event{
-		Context: ec,
-		Data:    data,
-	}, nil
-}
-
-func (v CodecV02) inspectEncoding(msg transport.Message) Encoding {
+func (v CodecV02) inspectEncoding(ctx context.Context, msg transport.Message) Encoding {
 	version := msg.CloudEventsVersion()
 	if version != cloudevents.CloudEventsVersionV02 {
 		return Unknown

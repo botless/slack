@@ -1,0 +1,31 @@
+apiVersion: bindings.mattmoor.dev/v1alpha1
+kind: SlackBinding
+metadata:
+  name: slack-binding
+spec:
+  subject:
+    apiVersion: sources.eventing.knative.dev/v1alpha1
+    kind: ContainerSource
+    # Either name or selector may be specified.
+    selector:
+      matchLabels:
+        slack: bot
+
+  secret:
+    name: slack
+
+---
+
+# This piece of the aggregated cluster role enables us to bind to
+# Knative ContainerSource resources
+kind: ClusterRole
+apiVersion: rbac.authorization.k8s.io/v1
+metadata:
+  name: binding-system-knative-eventing-sources
+  labels:
+    bindings.mattmoor.dev/release: devel
+    bindings.mattmoor.dev/controller: "true"
+rules:
+  - apiGroups: ["sources.eventing.knative.dev"]
+    resources: ["containersources"]
+    verbs: ["get", "list", "patch", "watch"]

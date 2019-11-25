@@ -1,30 +1,3 @@
-# Gopkg.toml example
-#
-# Refer to https://golang.github.io/dep/docs/Gopkg.toml.html
-# for detailed Gopkg.toml documentation.
-#
-# required = ["github.com/user/thing/cmd/thing"]
-# ignored = ["github.com/user/project/pkgX", "bitbucket.org/user/project/pkgA/pkgY"]
-#
-# [[constraint]]
-#   name = "github.com/user/project"
-#   version = "1.0.0"
-#
-# [[constraint]]
-#   name = "github.com/user/project2"
-#   branch = "dev"
-#   source = "github.com/myfork/project2"
-#
-# [[override]]
-#   name = "github.com/x/y"
-#   version = "2.4.0"
-#
-# [prune]
-#   non-go = false
-#   go-tests = true
-#   unused-packages = true
-
-
 [[constraint]]
   name = "github.com/nlopes/slack"
   version = "0.5.0"
@@ -35,4 +8,12 @@
 
 [[constraint]]
   name = "github.com/botless/events"
-  revision = "14f7cf42b916f88dfed5fc7e7d28c517d2d89073"
+  revision = "d838d0665d9f35c151aad8d2275e9b2abf211569"
+
+[[constraint]]
+  name = "github.com/mattmoor/bindings"
+  branch = "master"
+
+[[constraint]]
+  name = "github.com/cloudevents/sdk-go"
+  version = "v0.10.0"
